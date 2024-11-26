@@ -1,101 +1,311 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Download } from 'lucide-react';
+
+interface InvoiceItem {
+  description: string;
+  quantity: number;
+  price: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [items, setItems] = useState<InvoiceItem[]>([
+    { description: '', quantity: 0, price: 0 },
+  ]);
+  const [companyDetails, setCompanyDetails] = useState({
+    name: '',
+    address: '',
+    email: '',
+    phone: '',
+  });
+  const [clientDetails, setClientDetails] = useState({
+    name: '',
+    address: '',
+    email: '',
+    phone: '',
+  });
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const addItem = () => {
+    setItems([...items, { description: '', quantity: 0, price: 0 }]);
+  };
+
+  const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      [field]: field === 'description' ? value : Number(value),
+    };
+    setItems(newItems);
+  };
+
+  const calculateTotal = () => {
+    return items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+  };
+
+  const handleDownload = () => {
+    // Create the invoice content
+    const invoiceContent = `
+      Invoice #${invoiceNumber}
+      Date: ${invoiceDate}
+
+      From:
+      ${companyDetails.name}
+      ${companyDetails.address}
+      ${companyDetails.email}
+      ${companyDetails.phone}
+
+      To:
+      ${clientDetails.name}
+      ${clientDetails.address}
+      ${clientDetails.email}
+      ${clientDetails.phone}
+
+      Items:
+      ${items.map(item => `
+        ${item.description}
+        Quantity: ${item.quantity}
+        Price: $${item.price}
+        Subtotal: $${item.quantity * item.price}
+      `).join('\n')}
+
+      Total: $${calculateTotal().toFixed(2)}
+    `;
+
+    // Create blob and download
+    const blob = new Blob([invoiceContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${invoiceNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <h1 className="text-3xl font-bold text-center mb-8">Invoice Generator</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+        {/* Left Side - Input Form */}
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Invoice Details</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Invoice Number</Label>
+                <Input
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  placeholder="INV-001"
+                />
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={invoiceDate}
+                  onChange={(e) => setInvoiceDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Company Details</h2>
+            <div className="space-y-4">
+              <div>
+                <Label>Company Name</Label>
+                <Input
+                  value={companyDetails.name}
+                  onChange={(e) => setCompanyDetails({ ...companyDetails, name: e.target.value })}
+                  placeholder="Your Company Name"
+                />
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input
+                  value={companyDetails.address}
+                  onChange={(e) => setCompanyDetails({ ...companyDetails, address: e.target.value })}
+                  placeholder="Company Address"
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={companyDetails.email}
+                  onChange={(e) => setCompanyDetails({ ...companyDetails, email: e.target.value })}
+                  placeholder="company@example.com"
+                />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input
+                  value={companyDetails.phone}
+                  onChange={(e) => setCompanyDetails({ ...companyDetails, phone: e.target.value })}
+                  placeholder="Phone Number"
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Client Details</h2>
+            <div className="space-y-4">
+              <div>
+                <Label>Client Name</Label>
+                <Input
+                  value={clientDetails.name}
+                  onChange={(e) => setClientDetails({ ...clientDetails, name: e.target.value })}
+                  placeholder="Client Name"
+                />
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input
+                  value={clientDetails.address}
+                  onChange={(e) => setClientDetails({ ...clientDetails, address: e.target.value })}
+                  placeholder="Client Address"
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={clientDetails.email}
+                  onChange={(e) => setClientDetails({ ...clientDetails, email: e.target.value })}
+                  placeholder="client@example.com"
+                />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input
+                  value={clientDetails.phone}
+                  onChange={(e) => setClientDetails({ ...clientDetails, phone: e.target.value })}
+                  placeholder="Phone Number"
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Invoice Items</h2>
+            <div className="space-y-4">
+              {items.map((item, index) => (
+                <div key={index} className="grid grid-cols-12 gap-4">
+                  <div className="col-span-6">
+                    <Label>Description</Label>
+                    <Input
+                      value={item.description}
+                      onChange={(e) => updateItem(index, 'description', e.target.value)}
+                      placeholder="Item description"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Label>Quantity</Label>
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Label>Price</Label>
+                    <Input
+                      type="number"
+                      value={item.price}
+                      onChange={(e) => updateItem(index, 'price', e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              ))}
+              <Button onClick={addItem} variant="outline" className="w-full">
+                Add Item
+              </Button>
+            </div>
+          </Card>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Right Side - Preview */}
+        <div className="space-y-6">
+          <Card className="p-6 sticky top-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Invoice Preview</h2>
+              <Button onClick={handleDownload} className="flex items-center gap-2">
+                <Download className="w-4 h-4" /> Download
+              </Button>
+            </div>
+            
+            <div className="space-y-6 bg-white p-6 rounded-lg border">
+              {/* Invoice Header */}
+              <div className="flex justify-between">
+                <div>
+                  <h3 className="font-bold text-xl">{companyDetails.name || 'Your Company'}</h3>
+                  <p className="text-sm text-gray-600">{companyDetails.address}</p>
+                  <p className="text-sm text-gray-600">{companyDetails.email}</p>
+                  <p className="text-sm text-gray-600">{companyDetails.phone}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">Invoice #{invoiceNumber || 'INV-001'}</p>
+                  <p className="text-sm text-gray-600">Date: {invoiceDate || 'Select date'}</p>
+                </div>
+              </div>
+
+              {/* Client Details */}
+              <div className="border-t pt-4">
+                <p className="font-bold mb-2">Bill To:</p>
+                <h3 className="font-semibold">{clientDetails.name || 'Client Name'}</h3>
+                <p className="text-sm text-gray-600">{clientDetails.address}</p>
+                <p className="text-sm text-gray-600">{clientDetails.email}</p>
+                <p className="text-sm text-gray-600">{clientDetails.phone}</p>
+              </div>
+
+              {/* Items Table */}
+              <div className="border-t pt-4">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2">Description</th>
+                      <th className="text-right py-2">Qty</th>
+                      <th className="text-right py-2">Price</th>
+                      <th className="text-right py-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => (
+                      <tr key={index} className="border-b">
+                        <td className="py-2">{item.description || 'Item description'}</td>
+                        <td className="text-right py-2">{item.quantity}</td>
+                        <td className="text-right py-2">${item.price.toFixed(2)}</td>
+                        <td className="text-right py-2">${(item.quantity * item.price).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Total */}
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center">
+                  <p className="font-bold">Total Amount:</p>
+                  <p className="font-bold text-xl">${calculateTotal().toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
